@@ -14,7 +14,7 @@ No build step, no dependencies, no backend. It's one HTML file.
 
 ## Usage
 
-Open `netflix-codes.html` in any modern browser. You can double-click the file; there is nothing to install or serve.
+Open `index.html` in any modern browser.
 
 To open a category, you need to be signed in to Netflix in the same browser.
 
