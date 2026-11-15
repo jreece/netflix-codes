@@ -1,4 +1,4 @@
-# Genre Code Browser
+# Netflix Genre Code Browser
 
 A single-page website for browsing Netflix genre codes. Search or filter to a category, open it on Netflix in a new tab, or copy its code.
 
