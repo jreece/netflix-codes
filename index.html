@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Netflix Genre Code Browser</title>
+<style>
+:root{--bg:#f6f6f7;--surface:#fff;--text:#16181c;--muted:#5f6670;--border:#dcdfe4;--accent:#d81f26;--accent-h:#b3161c;--chip:#e9ebef;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141414;--surface:#232323;--text:#f2f2f2;--muted:#a3a3a3;--border:#383838;--accent:#e50914;--accent-h:#b20710;--chip:#2e2e2e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141414;--surface:#232323;--text:#f2f2f2;--muted:#a3a3a3;--border:#383838;--accent:#e50914;--accent-h:#b20710;--chip:#2e2e2e;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:28px 18px 40px}
+h1{margin:0;font-size:1.7rem;letter-spacing:-.01em}
+.sub{margin:4px 0 20px;color:var(--muted)}
+#q{width:100%;padding:12px 14px;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:10px}
+#q:focus{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:14px 0 6px;scrollbar-width:thin}
+.chip{flex:none;padding:6px 13px;border:0;border-radius:999px;background:var(--chip);color:var(--text);font:inherit;font-size:.9rem;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:#fff}
+.count{margin:10px 0 0;color:var(--muted);font-size:.9rem}
+h2{margin:26px 0 10px;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.name{font-weight:600;line-height:1.3}
+.row{display:flex;align-items:center;gap:8px;margin-top:auto}
+.code{font-variant-numeric:tabular-nums;color:var(--muted);margin-right:auto}
+.btn{padding:6px 12px;border-radius:8px;border:0;font:inherit;font-size:.9rem;cursor:pointer;text-decoration:none;display:inline-block;line-height:1.4}
+.copy{background:var(--chip);color:var(--text);min-width:78px}
+.copy:hover{filter:brightness(.95)}
+.open{background:var(--accent);color:#fff}
+.open:hover{background:var(--accent-h)}
+.btn:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.empty{padding:50px 0;text-align:center;color:var(--muted)}
+footer{margin-top:36px;color:var(--muted);font-size:.8rem}
+</style>
+</head>
+<body>
+<main>
+  <h1>Genre Code Browser</h1>
+  <p class="sub">Find a category, open it on Netflix in a new tab, or copy its code.</p>
+  <input id="q" type="search" placeholder="Search by name or code…" aria-label="Search genres" autocomplete="off">
+  <div class="chips" id="chips" role="group" aria-label="Filter by group"></div>
+  <p class="count" id="count" aria-live="polite"></p>
+  <div id="results"></div>
+  <footer>
+    Independent project, not affiliated with Netflix. You need to be signed in to Netflix in your browser, and availability varies by region. Netflix doesn’t verify third-party code lists, so a code may stop working.
+  </footer>
+</main>
+<script>
+// Edit this list to add or change categories: [name, code]
+const DATA = {
+  "Movies": [
+    ["Action & Adventure",1365],["Action Thrillers",43048],["Children & Family Movies",783],["Classic Movies",31574],
+    ["Comedies",6548],["Cult Movies",7627],["Dark Comedies",869],["Documentaries",6839],["Dramas",5763],
+    ["Crime Movies",5824],["Faith & Spirituality",26835],["Foreign Movies",7462],["Gay & Lesbian Movies",5977],
+    ["Independent Movies",7077],["Music & Musicals",1701],["Romantic Comedies",5475],["Romantic Movies",8883],
+    ["Sci-Fi & Fantasy",1492],["Sci-Fi Thrillers",11014],["Spy Action & Adventure",10702],["Sports Movies",4370],
+    ["Stand-Up Comedy",11559],["Thrillers",8933],["Experimental Movies",11079],["Hijacking Movies",20541]
+  ],
+  "Horror": [
+    ["Horror Movies",8711],["Monster Movies",947],["Slasher & Serial Killer Movies",8646],
+    ["Supernatural Horror Movies",42023],["Vampire Horror Movies",75804],["Werewolf Horror Movies",75930],
+    ["Zombie Horror Movies",75405]
+  ],
+  "TV shows": [
+    ["British TV Shows",52117],["Classic TV Shows",46553],["Crime TV Shows",26146],["Docuseries",10105],
+    ["Kids’ TV",27346],["Korean TV Shows",67879],["Reality TV",9833],["Teen TV Shows",60951],
+    ["TV Action & Adventure",10673],["TV Comedies",10375],["TV Dramas",11714],["TV Horror",83059],
+    ["TV Sci-Fi & Fantasy",1372],["Supernatural Soap Operas",81238162]
+  ],
+  "Anime & animation": [
+    ["Adult Animation",11881],["Anime",7424],["Anime Features",3063],["Anime Horror",10695],
+    ["Anime Sci-Fi",2729],["Anime Series",6721]
+  ],
+  "Collections": [
+    ["Recently Added",1592210],["Watch With the Family",2013975],["90-Minute Movies",81466194],
+    ["Short-Ass Movies",81603903],["Feel-Good Christmas Children & Family Films",1475066],
+    ["Twisted Christmas",2300975],["WWE Collection",81921063],["Inspirational Soccer Stories",81648636]
+  ]
+};
+const URL_BASE = "https://www.netflix.com/browse/genre/";
+const groups = Object.keys(DATA);
+let active = "All";
+const $q = document.getElementById("q"), $chips = document.getElementById("chips"),
+      $res = document.getElementById("results"), $count = document.getElementById("count");
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function drawChips(){
+  $chips.innerHTML = ["All",...groups].map(g =>
+    `<button class="chip" type="button" data-g="${esc(g)}" aria-pressed="${g===active}">${esc(g)}</button>`).join("");
+}
+
+function render(){
+  const q = $q.value.trim().toLowerCase();
+  let total = 0, html = "";
+  for (const g of groups){
+    if (active !== "All" && g !== active) continue;
+    const items = DATA[g]
+      .filter(([n,c]) => !q || (n+" "+g+" "+c).toLowerCase().includes(q))
+      .sort((a,b) => a[0].localeCompare(b[0]));
+    if (!items.length) continue;
+    total += items.length;
+    html += `<h2>${esc(g)}</h2><div class="grid">` + items.map(([n,c]) => `
+      <div class="card">
+        <div class="name">${esc(n)}</div>
+        <div class="row">
+          <span class="code">#${c}</span>
+          <button class="btn copy" type="button" data-code="${c}">Copy</button>
+          <a class="btn open" href="${URL_BASE}${c}" target="_blank" rel="noopener noreferrer">Open ↗</a>
+        </div>
+      </div>`).join("") + `</div>`;
+  }
+  $res.innerHTML = html || `<div class="empty">No matching categories. Try another search or group.</div>`;
+  $count.textContent = `${total} ${total===1?"category":"categories"}`;
+}
+
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (e) {
+    const t = document.createElement("textarea");
+    t.value = text; t.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(t); t.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (_) {}
+    t.remove(); return ok;
+  }
+}
+
+$res.addEventListener("click", async e => {
+  const b = e.target.closest(".copy");
+  if (!b) return;
+  const ok = await copyText(b.dataset.code);
+  b.textContent = ok ? "Copied ✓" : "Copy failed";
+  setTimeout(() => { b.textContent = "Copy"; }, 1300);
+});
+$chips.addEventListener("click", e => {
+  const c = e.target.closest(".chip");
+  if (!c) return;
+  active = c.dataset.g; drawChips(); render();
+});
+$q.addEventListener("input", render);
+
+drawChips(); render();
+</script>
+</body>
+</html>
